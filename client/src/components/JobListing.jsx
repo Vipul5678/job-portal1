@@ -1,6 +1,6 @@
-import { useContext, useEffect, useState } from 'react'
+ import { useContext, useEffect, useState } from 'react'
 import { AppContext } from '../context/AppContext'
-import { assets, JobCategories, JobLocations } from '../assets/assets'
+import { assets, JobCategories, JobLocations, jobsData } from '../assets/assets'
 import JobCard from './JobCard'
 
 const JobListing = () => {
@@ -12,7 +12,7 @@ const JobListing = () => {
     const [selectedCategories, setSelectedCategories] = useState([])
     const [selectedLocations, setSelectedLocations] = useState([])
 
-    const [filteredJobs, setFilteredJobs] = useState(jobs)
+    const [filteredJobs, setFilteredJobs] = useState(jobsData)
 
     const handleCategoryChange = (category) => {
         setSelectedCategories(
@@ -36,7 +36,9 @@ const JobListing = () => {
 
         const matchesSearchLocation = job => searchFilter.location === "" || job.location.toLowerCase().includes(searchFilter.location.toLowerCase())
 
-        const newFilteredJobs = jobs.slice().reverse().filter(
+        const jobsToShow = jobs.length ? jobs : jobsData
+
+        const newFilteredJobs = jobsToShow.slice().reverse().filter(
             job => matchesCategory(job) && matchesLocation(job) && matchesTitle(job) && matchesSearchLocation(job)
         )
 
@@ -122,11 +124,15 @@ const JobListing = () => {
             <section className='w-full lg:w-3/4 text-gray-800 max-lg:px-4'>
                 <h3 className='font-medium text-3xl py-2' id='job-list'>Latest jobs</h3>
                 <p className='mb-8'>Get your desired job from top companies</p>
-                <div className='grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4'>
-                    {filteredJobs.slice((currentPage - 1) * 6, currentPage * 6).map((job, index) => (
-                        <JobCard key={index} job={job} />
-                    ))}
-                </div>
+                {filteredJobs.length > 0 ? (
+                    <div className='grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4'>
+                        {filteredJobs.slice((currentPage - 1) * 6, currentPage * 6).map((job, index) => (
+                            <JobCard key={index} job={job} />
+                        ))}
+                    </div>
+                ) : (
+                    <p className='text-gray-500'>No jobs found for the selected filters.</p>
+                )}
 
 
                 {/* Pagination */}

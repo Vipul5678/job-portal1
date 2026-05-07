@@ -1,7 +1,8 @@
-import { createContext, useEffect, useState } from "react";
+ import { createContext, useEffect, useState } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
 import { useAuth, useUser } from "@clerk/clerk-react";
+import { jobsData } from "../assets/assets";
 
 export const AppContext = createContext()
 
@@ -19,7 +20,7 @@ export const AppContextProvider = (props) => {
 
     const [isSearched, setIsSearched] = useState(false)
 
-    const [jobs, setJobs] = useState([])
+    const [jobs, setJobs] = useState(jobsData)
 
     const [showRecruiterLogin, setShowRecruiterLogin] = useState(false)
 
@@ -29,20 +30,30 @@ export const AppContextProvider = (props) => {
     const [userData, setUserData] = useState(null)
     const [userApplications, setUserApplications] = useState([])
 
+    const loadDemoJobs = () => {
+        setJobs(jobsData)
+    }
+
     // Function to Fetch Jobs 
     const fetchJobs = async () => {
+        if (!backendUrl) {
+            loadDemoJobs()
+            return
+        }
+
         try {
 
             const { data } = await axios.get(backendUrl + '/api/jobs')
 
-            if (data.success) {
+            if (data.success && data.jobs?.length) {
                 setJobs(data.jobs)
             } else {
-                toast.error(data.message)
+                loadDemoJobs()
             }
 
         } catch (error) {
-            toast.error(error.message)
+            console.error('Unable to fetch jobs from backend, showing demo jobs instead:', error.message)
+            loadDemoJobs()
         }
     }
 
@@ -74,6 +85,8 @@ export const AppContextProvider = (props) => {
 
             if (data.success) {
                 setUserData(data.user)
+            } else if (data.message === 'User Not Found') {
+                setUserData(null)
             } else (
                 toast.error(data.message)
             )

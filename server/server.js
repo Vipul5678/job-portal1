@@ -18,26 +18,58 @@ const app = express()
 connectDB()
 await connectCloudinary()
 
-// ===== CORS (FINAL FIX) =====
-app.use(cors({
-  origin: "http://localhost:5173",
-  credentials: true,
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"]
-}))
+const defaultAllowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:5174',
+  'http://127.0.0.1:5173',
+  'http://127.0.0.1:5174',
+  'https://job-portal1-2zqr-client.vercel.app'
+]
 
-// ===== HANDLE PREFLIGHT =====
-app.use((req, res, next) => {
-  res.header("Access-Control-Allow-Origin", "http://localhost:5173");
-  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+const configuredAllowedOrigins = [
+  process.env.CLIENT_URL,
+  process.env.FRONTEND_URL,
+  process.env.CORS_ORIGIN,
+  process.env.ALLOWED_ORIGINS
+]
+  .filter(Boolean)
+  .flatMap((origin) => origin.split(','))
+  .map((origin) => origin.trim().replace(/\/$/, ''))
+  .filter(Boolean)
 
-  if (req.method === "OPTIONS") {
-    return res.sendStatus(200);
+const allowedOrigins = new Set([...defaultAllowedOrigins, ...configuredAllowedOrigins])
+
+const isVercelPreviewOrigin = (origin) => {
+  try {
+    const { hostname, protocol } = new URL(origin)
+    return protocol === 'https:' && hostname.endsWith('.vercel.app')
+  } catch {
+    return false
   }
+}
 
-  next();
-})
+const corsOptions = {
+  origin(origin, callback) {
+    if (!origin) {
+      return callback(null, true)
+    }
+
+    const normalizedOrigin = origin.replace(/\/$/, '')
+
+    if (allowedOrigins.has(normalizedOrigin) || isVercelPreviewOrigin(normalizedOrigin)) {
+      return callback(null, true)
+    }
+
+    return callback(new Error(`CORS blocked for origin: ${origin}`))
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'token']
+}
+
+// ===== CORS =====
+app.use(cors(corsOptions))
+app.options('*', cors(corsOptions))
 
 // ===== BODY PARSER =====
 app.use(express.json())

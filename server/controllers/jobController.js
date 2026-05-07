@@ -1,3 +1,4 @@
+ import mongoose from "mongoose"
 import Job from "../models/Job.js"
 
 
@@ -21,6 +22,13 @@ export const getJobById = async (req, res) => {
     try {
 
         const { id } = req.params
+
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.json({
+                success: false,
+                message: 'Job not found'
+            })
+        }
 
         const job = await Job.findById(id)
             .populate({

@@ -1,9 +1,9 @@
-import { useContext, useEffect, useState } from 'react'
+ import { useContext, useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { AppContext } from '../context/AppContext'
 import Loading from '../components/Loading'
 import Navbar from '../components/Navbar'
-import { assets } from '../assets/assets'
+import { assets, jobsData } from '../assets/assets'
 import kconvert from 'k-convert';
 import moment from 'moment';
 import JobCard from '../components/JobCard'
@@ -25,7 +25,21 @@ const ApplyJob = () => {
 
   const { jobs, backendUrl, userData, userApplications, fetchUserApplications } = useContext(AppContext)
 
+  const isMongoObjectId = (value) => /^[0-9a-fA-F]{24}$/.test(value)
+
   const fetchJob = async () => {
+
+    const demoJob = jobsData.find((job) => job._id === id)
+
+    if (demoJob && !isMongoObjectId(id)) {
+      setJobData(demoJob)
+      return
+    }
+
+    if (!backendUrl) {
+      setJobData(demoJob || null)
+      return
+    }
 
     try {
 
@@ -33,12 +47,19 @@ const ApplyJob = () => {
 
       if (data.success) {
         setJobData(data.job)
+      } else if (demoJob) {
+        setJobData(demoJob)
       } else {
         toast.error(data.message)
       }
 
     } catch (error) {
-      toast.error(error.message)
+      if (demoJob) {
+        console.error('Unable to fetch job from backend, showing demo job instead:', error.message)
+        setJobData(demoJob)
+      } else {
+        toast.error(error.message)
+      }
     }
 
   }
@@ -76,7 +97,7 @@ const ApplyJob = () => {
 
   const checkAlreadyApplied = () => {
 
-    const hasApplied = userApplications.some(item => item.jobId._id === JobData._id)
+    const hasApplied = userApplications.some(item => item.jobId?._id === JobData._id)
     setIsAlreadyApplied(hasApplied)
 
   }
