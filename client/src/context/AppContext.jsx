@@ -1,6 +1,5 @@
  import { createContext, useEffect, useState } from "react";
 import axios from "axios";
-import { toast } from "react-toastify";
 import { useAuth, useUser } from "@clerk/clerk-react";
 import { jobsData } from "../assets/assets";
 
@@ -28,7 +27,71 @@ export const AppContextProvider = (props) => {
     const [companyData, setCompanyData] = useState(null)
 
     const [userData, setUserData] = useState(null)
-    const [userApplications, setUserApplications] = useState([])
+    const [userApplications, setUserApplications] = useState(() => {
+        try {
+            return JSON.parse(localStorage.getItem('demoApplications')) || []
+        } catch {
+            return []
+        }
+    })
+
+    const getDemoApplications = () => {
+        try {
+            return JSON.parse(localStorage.getItem('demoApplications')) || []
+        } catch {
+            return []
+        }
+    }
+
+    const saveDemoApplications = (applications) => {
+        localStorage.setItem('demoApplications', JSON.stringify(applications))
+    }
+
+    const getDemoResume = () => localStorage.getItem('demoResume') || ''
+
+    const saveDemoResume = (resumeName) => {
+        const demoResume = `demo-resume:${resumeName}`
+        localStorage.setItem('demoResume', demoResume)
+        setUserData((prev) => prev ? { ...prev, resume: demoResume } : prev)
+    }
+
+    const getDemoUserData = () => user ? {
+        _id: user.id,
+        name: user.fullName || `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Demo User',
+        email: user.primaryEmailAddress?.emailAddress || '',
+        image: user.imageUrl || '',
+        resume: getDemoResume()
+    } : null
+
+    const addDemoApplication = (job, applicant) => {
+        const demoApplications = getDemoApplications()
+        const alreadyApplied = demoApplications.some((application) => application.jobId?._id === job._id)
+
+        if (alreadyApplied) {
+            setUserApplications((prev) => {
+                const hasApplication = prev.some((application) => application.jobId?._id === job._id)
+                return hasApplication ? prev : [...prev, ...demoApplications.filter((application) => application.jobId?._id === job._id)]
+            })
+            return
+        }
+
+        const application = {
+            _id: `demo-${job._id}`,
+            companyId: job.companyId,
+            jobId: job,
+            userId: applicant?._id || 'demo-user',
+            applicantName: applicant?.name || 'Demo User',
+            applicantEmail: applicant?.email || '',
+            applicantImage: applicant?.image || '',
+            date: Date.now(),
+            status: 'Pending',
+            isDemo: true
+        }
+
+        const updatedApplications = [...demoApplications, application]
+        saveDemoApplications(updatedApplications)
+        setUserApplications((prev) => [...prev, application])
+    }
 
     const loadDemoJobs = () => {
         setJobs(jobsData)
@@ -59,6 +122,11 @@ export const AppContextProvider = (props) => {
 
     // Function to Fetch Company Data
     const fetchCompanyData = async () => {
+        if (!backendUrl) {
+            setCompanyData(null)
+            return
+        }
+
         try {
 
             const { data } = await axios.get(backendUrl + '/api/company/company', { headers: { token: companyToken } })
@@ -66,16 +134,25 @@ export const AppContextProvider = (props) => {
             if (data.success) {
                 setCompanyData(data.company)
             } else {
-                toast.error(data.message)
+                console.error('Unable to fetch company data:', data.message)
+                setCompanyData(null)
             }
 
         } catch (error) {
-            toast.error(error.message)
+            console.error('Unable to fetch company data:', error.message)
+            setCompanyData(null)
         }
     }
 
     // Function to Fetch User Data
     const fetchUserData = async () => {
+        const demoUser = getDemoUserData()
+
+        if (!backendUrl) {
+            setUserData(demoUser)
+            return
+        }
+
         try {
 
             const token = await getToken();
@@ -84,20 +161,29 @@ export const AppContextProvider = (props) => {
                 { headers: { Authorization: `Bearer ${token}` } })
 
             if (data.success) {
-                setUserData(data.user)
+                setUserData({ ...data.user, resume: data.user.resume || getDemoResume() })
             } else if (data.message === 'User Not Found') {
-                setUserData(null)
-            } else (
-                toast.error(data.message)
-            )
+                setUserData(demoUser)
+            } else {
+                console.error('Unable to fetch user data, using demo user instead:', data.message)
+                setUserData(demoUser)
+            }
 
         } catch (error) {
-            toast.error(error.message)
+            console.error('Unable to fetch user data, using demo user instead:', error.message)
+            setUserData(demoUser)
         }
     }
 
     // Function to Fetch User's Applied Applications
     const fetchUserApplications = async () => {
+        const demoApplications = getDemoApplications()
+
+        if (!backendUrl) {
+            setUserApplications(demoApplications)
+            return
+        }
+
         try {
 
             const token = await getToken()
@@ -106,13 +192,19 @@ export const AppContextProvider = (props) => {
                 { headers: { Authorization: `Bearer ${token}` } }
             )
             if (data.success) {
-                setUserApplications(data.applications)
+                const backendApplications = data.applications || []
+                const demoOnlyApplications = demoApplications.filter(
+                    (demoApplication) => !backendApplications.some((application) => application.jobId?._id === demoApplication.jobId?._id)
+                )
+                setUserApplications([...backendApplications, ...demoOnlyApplications])
             } else {
-                toast.error(data.message)
+                console.error('Unable to fetch applications, showing saved demo applications instead:', data.message)
+                setUserApplications(demoApplications)
             }
 
         } catch (error) {
-            toast.error(error.message)
+            console.error('Unable to fetch applications, showing saved demo applications instead:', error.message)
+            setUserApplications(demoApplications)
         }
     }
 
@@ -155,6 +247,8 @@ export const AppContextProvider = (props) => {
         userApplications, setUserApplications,
         fetchUserData,
         fetchUserApplications,
+        addDemoApplication,
+        saveDemoResume,
 
     }
 

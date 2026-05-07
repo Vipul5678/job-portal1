@@ -1,3 +1,4 @@
+import { clerkClient } from "@clerk/express"
 import Job from "../models/Job.js"
 import JobApplication from "../models/JobApplication.js"
 import User from "../models/User.js"
@@ -10,10 +11,22 @@ export const getUserData = async (req, res) => {
 
     try {
 
-        const user = await User.findById(userId)
+        let user = await User.findById(userId)
 
         if (!user) {
-            return res.json({ success: false, message: 'User Not Found' })
+            const clerkUser = await clerkClient.users.getUser(userId)
+
+            const primaryEmail = clerkUser.emailAddresses.find(
+                (email) => email.id === clerkUser.primaryEmailAddressId
+            ) || clerkUser.emailAddresses[0]
+
+            user = await User.create({
+                _id: clerkUser.id,
+                email: primaryEmail?.emailAddress || '',
+                name: `${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim() || 'User',
+                image: clerkUser.imageUrl,
+                resume: ''
+            })
         }
 
         res.json({ success: true, user })

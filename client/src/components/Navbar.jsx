@@ -1,4 +1,4 @@
-import { useContext } from 'react'
+ import { useContext } from 'react'
 import { assets } from '../assets/assets'
 import { useClerk, UserButton, useUser } from '@clerk/clerk-react'
 import { Link, useNavigate } from 'react-router-dom'
@@ -20,14 +20,17 @@ const Navbar = () => {
                 {
                     user
                         ? <div className='flex items-center gap-3'>
+                            <Link to={'/ai-tools'}>AI Tools</Link>
+                            <p>|</p>
                             <Link to={'/applications'}>Applied Jobs</Link>
                             <p>|</p>
                             <p className='max-sm:hidden'>Hi, {user.firstName + " " + user.lastName}</p>
                             <UserButton />
                         </div>
                         : <div className='flex gap-4 max-sm:text-xs'>
-                            <button onClick={e => setShowRecruiterLogin(true)} className='text-gray-600'>Recruiter Login</button>
-                            <button onClick={e => openSignIn()} className='bg-blue-600 text-white px-6 sm:px-9 py-2 rounded-full'>Login</button>
+                            <Link to={'/ai-tools'} className='text-gray-600 flex items-center'>AI Tools</Link>
+                            <button onClick={() => setShowRecruiterLogin(true)} className='text-gray-600'>Recruiter Login</button>
+                            <button onClick={() => openSignIn()} className='bg-blue-600 text-white px-6 sm:px-9 py-2 rounded-full'>Login</button>
                         </div>
                 }
 

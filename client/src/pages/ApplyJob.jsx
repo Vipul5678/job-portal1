@@ -23,7 +23,7 @@ const ApplyJob = () => {
   const [JobData, setJobData] = useState(null)
   const [isAlreadyApplied, setIsAlreadyApplied] = useState(false)
 
-  const { jobs, backendUrl, userData, userApplications, fetchUserApplications } = useContext(AppContext)
+  const { jobs, backendUrl, userData, userApplications, fetchUserApplications, addDemoApplication } = useContext(AppContext)
 
   const isMongoObjectId = (value) => /^[0-9a-fA-F]{24}$/.test(value)
 
@@ -69,6 +69,14 @@ const ApplyJob = () => {
 
       if (!userData) {
         return toast.error('Login to apply for jobs')
+      }
+
+      if (!isMongoObjectId(JobData._id)) {
+        addDemoApplication(JobData, userData)
+        setIsAlreadyApplied(true)
+        toast.success('Applied Successfully')
+        navigate('/applications')
+        return
       }
 
       if (!userData.resume) {

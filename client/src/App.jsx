@@ -1,4 +1,4 @@
-import { useContext } from 'react'
+ import { useContext } from 'react'
 import { Route, Routes } from 'react-router-dom'
 import Home from './pages/Home'
 import ApplyJob from './pages/ApplyJob'
@@ -9,6 +9,8 @@ import Dashboard from './pages/Dashboard'
 import AddJob from './pages/AddJob'
 import ManageJobs from './pages/ManageJobs'
 import ViewApplications from './pages/ViewApplications'
+import AiTools from './pages/AiTools'
+import AiChatBot from './components/AiChatBot'
 import 'quill/dist/quill.snow.css'
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -25,6 +27,7 @@ const App = () => {
         <Route path='/' element={<Home />} />
         <Route path='/apply-job/:id' element={<ApplyJob />} />
         <Route path='/applications' element={<Applications />} />
+        <Route path='/ai-tools' element={<AiTools />} />
         <Route path='/dashboard' element={<Dashboard />}>
           {
             companyToken ? <>
@@ -35,6 +38,7 @@ const App = () => {
           }
         </Route>
       </Routes>
+      <AiChatBot />
     </div>
   )
 }
