@@ -1,32 +1,56 @@
-import express from 'express'
-import { ChangeJobApplicationsStatus, changeVisiblity, getCompanyData, getCompanyJobApplicants, getCompanyPostedJobs, loginCompany, postJob, registerCompany } from '../controllers/companyController.js'
-import upload from '../config/multer.js'
-import { protectCompany } from '../middleware/authMiddleware.js'
+ const express = require('express');
+const Job = require('../models/Job');
 
-const router = express.Router()
+const router = express.Router();
 
-// Register a company
-router.post('/register', upload.single('image'), registerCompany)
+// ADD JOB
+router.post('/post-job', async (req, res) => {
+  try {
 
-// Company login
-router.post('/login', loginCompany)
+    const {
+      title,
+      description,
+      location,
+      salary,
+      category,
+      level
+    } = req.body;
 
-// Get company data
-router.get('/company', protectCompany, getCompanyData)
+    // Validation
+    if (!title || !description || !location || !salary || !category || !level) {
+      return res.status(400).json({
+        success: false,
+        message: 'All fields are required'
+      });
+    }
 
-// Post a job
-router.post('/post-job', protectCompany, postJob)
+    // Create Job
+    const newJob = new Job({
+      title,
+      description,
+      location,
+      salary,
+      category,
+      level,
+      visible: true
+    });
 
-// Get Applicants Data of Company
-router.get('/applicants', protectCompany, getCompanyJobApplicants)
+    await newJob.save();
 
-// Get  Company Job List
-router.get('/list-jobs', protectCompany, getCompanyPostedJobs)
+    res.json({
+      success: true,
+      message: 'Job added successfully',
+      job: newJob
+    });
 
-// Change Applcations Status 
-router.post('/change-status', protectCompany, ChangeJobApplicationsStatus)
+  } catch (error) {
+    console.log(error);
 
-// Change Applcations Visiblity 
-router.post('/change-visiblity', protectCompany, changeVisiblity)
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+});
 
-export default router
+module.exports = router;

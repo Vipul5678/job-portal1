@@ -1,105 +1,76 @@
- import { useContext, useEffect, useState } from 'react'
-import { assets } from '../assets/assets'
-import { AppContext } from '../context/AppContext'
+ import React, { useContext, useState } from 'react'
 import axios from 'axios'
-import { useNavigate } from 'react-router-dom'
-import { toast } from 'react-toastify'
-
-axios.defaults.withCredentials = true
+import { AppContext } from '../context/AppContext'
 
 const RecruiterLogin = () => {
 
-    const navigate = useNavigate()
+    const { backendUrl, setShowRecruiterLogin, setCompanyToken } = useContext(AppContext)
 
-    const [state, setState] = useState('Login')
+    const [isLogin, setIsLogin] = useState(true)
+
     const [name, setName] = useState('')
-    const [password, setPassword] = useState('')
     const [email, setEmail] = useState('')
-
-    const [image, setImage] = useState(false)
-
-    const [isTextDataSubmited, setIsTextDataSubmited] = useState(false)
-
-    const {
-        setShowRecruiterLogin,
-        backendUrl,
-        setCompanyToken,
-        setCompanyData
-    } = useContext(AppContext)
+    const [password, setPassword] = useState('')
+    const [company, setCompany] = useState('')
+    const [phone, setPhone] = useState('')
 
     const onSubmitHandler = async (e) => {
 
         e.preventDefault()
 
-        if (state === "Sign Up" && !isTextDataSubmited) {
-            return setIsTextDataSubmited(true)
-        }
-
         try {
 
-            console.log("Backend URL:", backendUrl)
+            if (isLogin) {
 
-            if (state === "Login") {
-
+                // LOGIN
                 const { data } = await axios.post(
-                    `${backendUrl}/api/company/login`,
-                    { email, password },
-                    { withCredentials: true }
+                    `${backendUrl}/api/recruiter/login`,
+                    {
+                        email,
+                        password
+                    }
                 )
-
-                console.log(data)
 
                 if (data.success) {
 
-                    setCompanyData(data.company)
-                    setCompanyToken(data.token)
-
                     localStorage.setItem('companyToken', data.token)
 
-                    toast.success("Login Successful")
+                    setCompanyToken(data.token)
 
                     setShowRecruiterLogin(false)
 
-                    navigate('/dashboard')
+                    window.location.href = '/dashboard/add-job'
 
                 } else {
-
-                    toast.error(data.message)
-
+                    alert(data.message)
                 }
 
             } else {
 
-                const formData = new FormData()
-
-                formData.append('name', name)
-                formData.append('password', password)
-                formData.append('email', email)
-                formData.append('image', image)
-
+                // SIGNUP
                 const { data } = await axios.post(
-                    `${backendUrl}/api/company/register`,
-                    formData,
-                    { withCredentials: true }
+                    `${backendUrl}/api/recruiter/signup`,
+                    {
+                        name,
+                        email,
+                        password,
+                        company,
+                        phone
+                    }
                 )
 
                 if (data.success) {
 
-                    setCompanyData(data.company)
-                    setCompanyToken(data.token)
-
                     localStorage.setItem('companyToken', data.token)
 
-                    toast.success("Account Created")
+                    setCompanyToken(data.token)
 
                     setShowRecruiterLogin(false)
 
-                    navigate('/dashboard')
+                    window.location.href = '/dashboard/add-job'
 
                 } else {
-
-                    toast.error(data.message)
-
+                    alert(data.message)
                 }
 
             }
@@ -108,168 +79,90 @@ const RecruiterLogin = () => {
 
             console.log(error)
 
-            toast.error(error.response?.data?.message || error.message)
-
+            alert(
+                error.response?.data?.message ||
+                'Something went wrong'
+            )
         }
-
     }
 
-    useEffect(() => {
-
-        document.body.style.overflow = 'hidden'
-
-        return () => {
-            document.body.style.overflow = 'unset'
-        }
-
-    }, [])
-
     return (
-        <div className='absolute top-0 left-0 right-0 bottom-0 z-10 backdrop-blur-sm bg-black/30 flex justify-center items-center'>
+        <div className='fixed inset-0 z-10 backdrop-blur-sm bg-black/30 flex justify-center items-center'>
 
-            <form onSubmit={onSubmitHandler} className='relative bg-white p-10 rounded-xl text-slate-500'>
+            <form
+                onSubmit={onSubmitHandler}
+                className='bg-white p-8 rounded-xl flex flex-col gap-4 w-[350px]'
+            >
 
-                <h1 className='text-center text-2xl text-neutral-700 font-medium'>
-                    Recruiter {state}
-                </h1>
+                <h2 className='text-2xl font-semibold text-center'>
+                    {isLogin ? 'Recruiter Login' : 'Recruiter Signup'}
+                </h2>
 
-                <p className='text-sm'>
-                    Welcome back! Please sign in to continue
-                </p>
+                {!isLogin && (
+                    <>
+                        <input
+                            type='text'
+                            placeholder='Full Name'
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            className='border p-2 rounded'
+                            required
+                        />
 
-                {
-                    state === "Sign Up" && isTextDataSubmited
-                        ? (
-                            <div className='flex items-center gap-4 my-10'>
+                        <input
+                            type='text'
+                            placeholder='Company Name'
+                            value={company}
+                            onChange={(e) => setCompany(e.target.value)}
+                            className='border p-2 rounded'
+                            required
+                        />
 
-                                <label htmlFor="image">
+                        <input
+                            type='text'
+                            placeholder='Phone'
+                            value={phone}
+                            onChange={(e) => setPhone(e.target.value)}
+                            className='border p-2 rounded'
+                        />
+                    </>
+                )}
 
-                                    <img
-                                        className='w-16 rounded-full'
-                                        src={image ? URL.createObjectURL(image) : assets.upload_area}
-                                        alt=""
-                                    />
+                <input
+                    type='email'
+                    placeholder='Email'
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className='border p-2 rounded'
+                    required
+                />
 
-                                    <input
-                                        onChange={e => setImage(e.target.files[0])}
-                                        type="file"
-                                        id='image'
-                                        hidden
-                                    />
-
-                                </label>
-
-                                <p>
-                                    Upload Company <br /> logo
-                                </p>
-
-                            </div>
-                        )
-                        : (
-                            <>
-                                {
-                                    state !== 'Login' && (
-                                        <div className='border px-4 py-2 flex items-center gap-2 rounded-full mt-5'>
-                                            <img src={assets.person_icon} alt="" />
-
-                                            <input
-                                                className='outline-none text-sm'
-                                                onChange={e => setName(e.target.value)}
-                                                value={name}
-                                                type="text"
-                                                placeholder='Company Name'
-                                                required
-                                            />
-                                        </div>
-                                    )
-                                }
-
-                                <div className='border px-4 py-2 flex items-center gap-2 rounded-full mt-5'>
-
-                                    <img src={assets.email_icon} alt="" />
-
-                                    <input
-                                        className='outline-none text-sm'
-                                        onChange={e => setEmail(e.target.value)}
-                                        value={email}
-                                        type="email"
-                                        placeholder='Email Id'
-                                        required
-                                    />
-
-                                </div>
-
-                                <div className='border px-4 py-2 flex items-center gap-2 rounded-full mt-5'>
-
-                                    <img src={assets.lock_icon} alt="" />
-
-                                    <input
-                                        className='outline-none text-sm'
-                                        onChange={e => setPassword(e.target.value)}
-                                        value={password}
-                                        type="password"
-                                        placeholder='Password'
-                                        required
-                                    />
-
-                                </div>
-
-                            </>
-                        )
-                }
-
-                {
-                    state === "Login" &&
-                    <p className='text-sm text-blue-600 mt-4 cursor-pointer'>
-                        Forgot password?
-                    </p>
-                }
+                <input
+                    type='password'
+                    placeholder='Password'
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className='border p-2 rounded'
+                    required
+                />
 
                 <button
                     type='submit'
-                    className='bg-blue-600 w-full text-white py-2 rounded-full mt-4'
+                    className='bg-blue-600 text-white py-2 rounded'
                 >
-                    {
-                        state === 'Login'
-                            ? 'Login'
-                            : isTextDataSubmited
-                                ? 'Create Account'
-                                : 'Next'
-                    }
+                    {isLogin ? 'Login' : 'Create Account'}
                 </button>
 
-                {
-                    state === 'Login'
-                        ? (
-                            <p className='mt-5 text-center'>
-                                Don't have an account?
-                                <span
-                                    className='text-blue-600 cursor-pointer'
-                                    onClick={() => setState("Sign Up")}
-                                >
-                                    Sign Up
-                                </span>
-                            </p>
-                        )
-                        : (
-                            <p className='mt-5 text-center'>
-                                Already have an account?
-                                <span
-                                    className='text-blue-600 cursor-pointer'
-                                    onClick={() => setState("Login")}
-                                >
-                                    Login
-                                </span>
-                            </p>
-                        )
-                }
-
-                <img
-                    onClick={() => setShowRecruiterLogin(false)}
-                    className='absolute top-5 right-5 cursor-pointer'
-                    src={assets.cross_icon}
-                    alt=""
-                />
+                <p
+                    className='text-sm text-center cursor-pointer'
+                    onClick={() => setIsLogin(!isLogin)}
+                >
+                    {
+                        isLogin
+                            ? 'Create new account'
+                            : 'Already have account? Login'
+                    }
+                </p>
 
             </form>
 

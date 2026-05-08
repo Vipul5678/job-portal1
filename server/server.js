@@ -1,99 +1,93 @@
- import './config/instrument.js'
-import express from 'express'
-import cors from 'cors'
-import 'dotenv/config'
-import connectDB from './config/db.js'
-import * as Sentry from "@sentry/node";
-import { clerkWebhooks } from './controllers/webhooks.js'
-import companyRoutes from './routes/companyRoutes.js'
-import connectCloudinary from './config/cloudinary.js'
-import jobRoutes from './routes/jobRoutes.js'
-import userRoutes from './routes/userRoutes.js'
-import aiRoutes from './routes/aiRoutes.js'
-import { clerkMiddleware } from '@clerk/express'
+ const express = require('express');
+const mongoose = require('mongoose');
+const cors = require('cors');
+const dotenv = require('dotenv');
+const path = require('path');
 
-// Initialize
-const app = express()
+dotenv.config();
 
-// Connect DB & Cloudinary
-connectDB()
-await connectCloudinary()
+const app = express();
 
-const defaultAllowedOrigins = [
-  'http://localhost:5173',
-  'http://localhost:5174',
-  'http://127.0.0.1:5173',
-  'http://127.0.0.1:5174',
-  'https://job-portal1-2zqr-client.vercel.app'
-]
 
-const configuredAllowedOrigins = [
-  process.env.CLIENT_URL,
-  process.env.FRONTEND_URL,
-  process.env.CORS_ORIGIN,
-  process.env.ALLOWED_ORIGINS
-]
-  .filter(Boolean)
-  .flatMap((origin) => origin.split(','))
-  .map((origin) => origin.trim().replace(/\/$/, ''))
-  .filter(Boolean)
-
-const allowedOrigins = new Set([...defaultAllowedOrigins, ...configuredAllowedOrigins])
-
-const isVercelPreviewOrigin = (origin) => {
-  try {
-    const { hostname, protocol } = new URL(origin)
-    return protocol === 'https:' && hostname.endsWith('.vercel.app')
-  } catch {
-    return false
-  }
-}
-
-const corsOptions = {
-  origin(origin, callback) {
-    if (!origin) {
-      return callback(null, true)
-    }
-
-    const normalizedOrigin = origin.replace(/\/$/, '')
-
-    if (allowedOrigins.has(normalizedOrigin) || isVercelPreviewOrigin(normalizedOrigin)) {
-      return callback(null, true)
-    }
-
-    return callback(new Error(`CORS blocked for origin: ${origin}`))
-  },
+// CORS
+app.use(cors({
+  origin: ['http://localhost:5173', 'http://localhost:3000'],
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization', 'token']
-}
+}));
 
-// ===== CORS =====
-app.use(cors(corsOptions))
-app.options('*', cors(corsOptions))
 
-// ===== BODY PARSER =====
-app.use(express.json())
+// Body Parser
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// ===== CLERK (safe use) =====
-app.use(clerkMiddleware())
 
-// ===== ROUTES =====
-app.get('/', (req, res) => res.send("API Working"))
+// Static Folder
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-app.post('/webhooks', clerkWebhooks)
 
-app.use('/api/company', companyRoutes)
-app.use('/api/jobs', jobRoutes)
-app.use('/api/users', userRoutes)
-app.use('/api/ai', aiRoutes)
+// MongoDB
+mongoose.connect(
+  process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/job-portal'
+)
+.then(() => {
+  console.log('✅ MongoDB Connected');
+})
+.catch((err) => {
+  console.log('❌ MongoDB Error:', err);
+});
 
-// ===== SENTRY =====
-Sentry.setupExpressErrorHandler(app)
 
-// ===== SERVER =====
-const PORT = process.env.PORT || 5000
+// ROUTES
+const recruiterAuthRoutes = require('./routes/recruiterAuth');
+const jobRoutes = require('./routes/jobRoutes');
+const companyRoutes = require('./routes/companyRoutes');
+
+
+// Route Use
+app.use('/api/recruiter', recruiterAuthRoutes);
+app.use('/api/jobs', jobRoutes);
+app.use('/api/company', companyRoutes);
+
+
+// Test Route
+app.get('/', (req, res) => {
+  res.send('Backend Running Successfully');
+});
+
+
+// Health Route
+app.get('/api/health', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Server Running'
+  });
+});
+
+
+// 404
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    message: 'Route not found'
+  });
+});
+
+
+// Error Middleware
+app.use((err, req, res, next) => {
+  console.log(err);
+
+  res.status(500).json({
+    success: false,
+    message: err.message
+  });
+});
+
+
+const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`)
-})
+  console.log(`🚀 Server running on http://localhost:${PORT}`);
+});

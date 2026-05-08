@@ -1,4 +1,4 @@
-import { useContext, useEffect } from 'react'
+ import { useContext, useEffect } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { assets } from '../assets/assets'
 import { AppContext } from '../context/AppContext'
@@ -7,68 +7,93 @@ const Dashboard = () => {
 
     const navigate = useNavigate()
 
-    const { companyData, setCompanyData, setCompanyToken } = useContext(AppContext)
+    const {
+        companyData,
+        companyToken,
+        setCompanyData,
+        setCompanyToken
+    } = useContext(AppContext)
 
-    // Function to logout for company
+    // Logout
     const logout = () => {
-        setCompanyToken(null)
+
         localStorage.removeItem('companyToken')
+
+        setCompanyToken(null)
         setCompanyData(null)
+
         navigate('/')
     }
 
+    // Check login
     useEffect(() => {
-        if (companyData) {
-            navigate('/dashboard/manage-jobs')
+
+        if (!companyToken) {
+            navigate('/')
         }
-    }, [companyData])
+
+    }, [companyToken])
 
     return (
-        <div className='min-h-screen'>
+        <div className='min-h-screen bg-gray-100'>
 
-            {/* Navbar for Recuriter Panel */}
-            <div className='shadow py-4'>
-                <div className='px-5 flex justify-between items-center'>
-                    <img onClick={e => navigate('/')} className='max-sm:w-32 cursor-pointer' src={assets.logo} alt="" />
-                    {companyData && (
-                        <div className='flex items-center gap-3'>
-                            <p className='max-sm:hidden'>Welcome, {companyData.name}</p>
-                            <div className='relative group'>
-                                <img className='w-8 border rounded-full' src={companyData.image} alt="" />
-                                <div className='absolute hidden group-hover:block top-0 right-0 z-10 text-black rounded  pt-12'>
-                                    <ul className='list-none m-0 p-2 bg-white rounded-md border text-sm'>
-                                        <li onClick={logout} className='py-1 px-2 cursor-pointer pr-10'>Logout</li>
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
-                    )}
+            {/* Navbar */}
+            <div className='bg-white shadow py-4 px-5 flex justify-between items-center'>
+
+                <img
+                    src={assets.logo}
+                    alt=""
+                    className='w-32 cursor-pointer'
+                    onClick={() => navigate('/')}
+                />
+
+                <div className='flex items-center gap-4'>
+
+                    <p>
+                        Welcome {companyData?.name || 'Recruiter'}
+                    </p>
+
+                    <button
+                        onClick={logout}
+                        className='bg-red-500 text-white px-4 py-2 rounded'
+                    >
+                        Logout
+                    </button>
+
                 </div>
+
             </div>
 
-            <div className='flex items-start'>
+            <div className='flex'>
 
-                {/* Left Sidebar with option to add job, manage jobs, view applications */}
-                <div className='inline-block min-h-screen border-r-2'>
-                    <ul className='flex flex-col items-start pt-5 text-gray-800'>
-                        <NavLink className={({ isActive }) => ` flex items-center p-3 sm:px-6 gap-2 w-full hover:bg-gray-100 ${isActive && 'bg-blue-100 border-r-4 border-blue-500'}`} to={'/dashboard/add-job'}>
-                            <img className='min-w-4' src={assets.add_icon} alt="" />
-                            <p className='max-sm:hidden'>Add Job</p>
-                        </NavLink>
+                {/* Sidebar */}
+                <div className='w-60 bg-white min-h-screen border-r'>
 
-                        <NavLink className={({ isActive }) => ` flex items-center p-3 sm:px-6 gap-2 w-full hover:bg-gray-100 ${isActive && 'bg-blue-100 border-r-4 border-blue-500'}`} to={'/dashboard/manage-jobs'}>
-                            <img className='min-w-4' src={assets.home_icon} alt="" />
-                            <p className='max-sm:hidden'>Manage Jobs</p>
-                        </NavLink>
+                    <NavLink
+                        to='/dashboard/add-job'
+                        className='block px-6 py-4 hover:bg-gray-100'
+                    >
+                        Add Job
+                    </NavLink>
 
-                        <NavLink className={({ isActive }) => ` flex items-center p-3 sm:px-6 gap-2 w-full hover:bg-gray-100 ${isActive && 'bg-blue-100 border-r-4 border-blue-500'}`} to={'/dashboard/view-applications'}>
-                            <img className='min-w-4' src={assets.person_tick_icon} alt="" />
-                            <p className='max-sm:hidden'>View Applications</p>
-                        </NavLink>
-                    </ul>
+                    <NavLink
+                        to='/dashboard/manage-jobs'
+                        className='block px-6 py-4 hover:bg-gray-100'
+                    >
+                        Manage Jobs
+                    </NavLink>
+
+                    <NavLink
+                        to='/dashboard/view-applications'
+                        className='block px-6 py-4 hover:bg-gray-100'
+                    >
+                        View Applications
+                    </NavLink>
+
                 </div>
 
-                <div className='flex-1 h-full p-2 sm:p-5'>
+                {/* Main */}
+                <div className='flex-1 p-5'>
                     <Outlet />
                 </div>
 
