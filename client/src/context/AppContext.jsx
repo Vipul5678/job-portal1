@@ -3,256 +3,242 @@ import axios from "axios";
 import { useAuth, useUser } from "@clerk/clerk-react";
 import { jobsData } from "../assets/assets";
 
-export const AppContext = createContext()
+export const AppContext = createContext();
 
 export const AppContextProvider = (props) => {
 
-const backendUrl = "http://localhost:5000"
+    // Backend URL
+ const backendUrl = import.meta.env.VITE_BACKEND_URL
+    // Clerk
     const { user } = useUser()
-    const { getToken } = useAuth()
+    const { getToken } = useAuth();
 
+    // IMPORTANT
+    
+    // States
     const [searchFilter, setSearchFilter] = useState({
         title: '',
         location: ''
-    })
+    });
 
-    const [isSearched, setIsSearched] = useState(false)
+    const [isSearched, setIsSearched] = useState(false);
 
-    const [jobs, setJobs] = useState(jobsData)
+    const [jobs, setJobs] = useState(jobsData);
 
-    const [showRecruiterLogin, setShowRecruiterLogin] = useState(false)
+    const [showRecruiterLogin, setShowRecruiterLogin] = useState(false);
 
-    const [companyToken, setCompanyToken] = useState(null)
-    const [companyData, setCompanyData] = useState(null)
+    const [companyToken, setCompanyToken] = useState(null);
+    const [companyData, setCompanyData] = useState(null);
 
-    const [userData, setUserData] = useState(null)
+    const [userData, setUserData] = useState(null);
+
     const [userApplications, setUserApplications] = useState(() => {
         try {
-            return JSON.parse(localStorage.getItem('demoApplications')) || []
+            return JSON.parse(localStorage.getItem('demoApplications')) || [];
         } catch {
-            return []
+            return [];
         }
-    })
+    });
 
+    // Demo Helpers
     const getDemoApplications = () => {
         try {
-            return JSON.parse(localStorage.getItem('demoApplications')) || []
+            return JSON.parse(localStorage.getItem('demoApplications')) || [];
         } catch {
-            return []
+            return [];
         }
-    }
+    };
 
     const saveDemoApplications = (applications) => {
-        localStorage.setItem('demoApplications', JSON.stringify(applications))
-    }
+        localStorage.setItem('demoApplications', JSON.stringify(applications));
+    };
 
-    const getDemoResume = () => localStorage.getItem('demoResume') || ''
+    const getDemoResume = () => {
+        return localStorage.getItem('demoResume') || '';
+    };
 
     const saveDemoResume = (resumeName) => {
-        const demoResume = `demo-resume:${resumeName}`
-        localStorage.setItem('demoResume', demoResume)
-        setUserData((prev) => prev ? { ...prev, resume: demoResume } : prev)
-    }
+        const demoResume = `demo-resume:${resumeName}`;
+        localStorage.setItem('demoResume', demoResume);
 
-    const getDemoUserData = () => user ? {
-        _id: user.id,
-        name: user.fullName || `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Demo User',
-        email: user.primaryEmailAddress?.emailAddress || '',
-        image: user.imageUrl || '',
-        resume: getDemoResume()
-    } : null
+        setUserData((prev) =>
+            prev ? { ...prev, resume: demoResume } : prev
+        );
+    };
 
-    const addDemoApplication = (job, applicant) => {
-        const demoApplications = getDemoApplications()
-        const alreadyApplied = demoApplications.some((application) => application.jobId?._id === job._id)
+    const getDemoUserData = () => {
+        return user
+            ? {
+                _id: user.id,
+                name:
+                    user.fullName ||
+                    `${user.firstName || ''} ${user.lastName || ''}`.trim() ||
+                    'Demo User',
+                email: user.primaryEmailAddress?.emailAddress || '',
+                image: user.imageUrl || '',
+                resume: getDemoResume()
+            }
+            : null;
+    };
 
-        if (alreadyApplied) {
-            setUserApplications((prev) => {
-                const hasApplication = prev.some((application) => application.jobId?._id === job._id)
-                return hasApplication ? prev : [...prev, ...demoApplications.filter((application) => application.jobId?._id === job._id)]
-            })
-            return
-        }
-
-        const application = {
-            _id: `demo-${job._id}`,
-            companyId: job.companyId,
-            jobId: job,
-            userId: applicant?._id || 'demo-user',
-            applicantName: applicant?.name || 'Demo User',
-            applicantEmail: applicant?.email || '',
-            applicantImage: applicant?.image || '',
-            date: Date.now(),
-            status: 'Pending',
-            isDemo: true
-        }
-
-        const updatedApplications = [...demoApplications, application]
-        saveDemoApplications(updatedApplications)
-        setUserApplications((prev) => [...prev, application])
-    }
-
-    const loadDemoJobs = () => {
-        setJobs(jobsData)
-    }
-
-    // Function to Fetch Jobs 
+    // Fetch Jobs
     const fetchJobs = async () => {
+
         if (!backendUrl) {
-            loadDemoJobs()
-            return
+            setJobs(jobsData);
+            return;
         }
 
         try {
 
-            const { data } = await axios.get(backendUrl + '/api/jobs')
+            const { data } = await axios.get(
+                backendUrl + '/api/jobs'
+            );
 
             if (data.success && data.jobs?.length) {
-                setJobs(data.jobs)
+                setJobs(data.jobs);
             } else {
-                loadDemoJobs()
+                setJobs(jobsData);
             }
 
         } catch (error) {
-            console.error('Unable to fetch jobs from backend, showing demo jobs instead:', error.message)
-            loadDemoJobs()
+            console.error(error);
+            setJobs(jobsData);
         }
-    }
+    };
 
-    // Function to Fetch Company Data
-    const fetchCompanyData = async () => {
-        if (!backendUrl) {
-            setCompanyData(null)
-            return
-        }
-
-        try {
-
-            const { data } = await axios.get(backendUrl + '/api/company/company', { headers: { token: companyToken } })
-
-            if (data.success) {
-                setCompanyData(data.company)
-            } else {
-                console.error('Unable to fetch company data:', data.message)
-                setCompanyData(null)
-            }
-
-        } catch (error) {
-            console.error('Unable to fetch company data:', error.message)
-            setCompanyData(null)
-        }
-    }
-
-    // Function to Fetch User Data
+    // Fetch User
     const fetchUserData = async () => {
-        const demoUser = getDemoUserData()
+
+        const demoUser = getDemoUserData();
 
         if (!backendUrl) {
-            setUserData(demoUser)
-            return
+            setUserData(demoUser);
+            return;
         }
 
         try {
 
             const token = await getToken();
 
-            const { data } = await axios.get(backendUrl + '/api/users/user',
-                { headers: { Authorization: `Bearer ${token}` } })
+            const { data } = await axios.get(
+                backendUrl + '/api/users/user',
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
+                }
+            );
 
             if (data.success) {
-                setUserData({ ...data.user, resume: data.user.resume || getDemoResume() })
-            } else if (data.message === 'User Not Found') {
-                setUserData(demoUser)
+                setUserData(data.user);
             } else {
-                console.error('Unable to fetch user data, using demo user instead:', data.message)
-                setUserData(demoUser)
+                setUserData(demoUser);
             }
 
         } catch (error) {
-            console.error('Unable to fetch user data, using demo user instead:', error.message)
-            setUserData(demoUser)
+            console.error(error);
+            setUserData(demoUser);
         }
-    }
+    };
 
-    // Function to Fetch User's Applied Applications
+    // Fetch Applications
     const fetchUserApplications = async () => {
-        const demoApplications = getDemoApplications()
+
+        const demoApplications = getDemoApplications();
 
         if (!backendUrl) {
-            setUserApplications(demoApplications)
-            return
+            setUserApplications(demoApplications);
+            return;
         }
 
         try {
 
-            const token = await getToken()
+            const token = await getToken();
 
-            const { data } = await axios.get(backendUrl + '/api/users/applications',
-                { headers: { Authorization: `Bearer ${token}` } }
-            )
+            const { data } = await axios.get(
+                backendUrl + '/api/users/applications',
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
+                }
+            );
+
             if (data.success) {
-                const backendApplications = data.applications || []
-                const demoOnlyApplications = demoApplications.filter(
-                    (demoApplication) => !backendApplications.some((application) => application.jobId?._id === demoApplication.jobId?._id)
-                )
-                setUserApplications([...backendApplications, ...demoOnlyApplications])
+                setUserApplications(data.applications);
             } else {
-                console.error('Unable to fetch applications, showing saved demo applications instead:', data.message)
-                setUserApplications(demoApplications)
+                setUserApplications(demoApplications);
             }
 
         } catch (error) {
-            console.error('Unable to fetch applications, showing saved demo applications instead:', error.message)
-            setUserApplications(demoApplications)
+            console.error(error);
+            setUserApplications(demoApplications);
         }
-    }
+    };
 
-    // Retrive Company Token From LocalStorage
+    // Load Initial Data
     useEffect(() => {
-        fetchJobs()
 
-        const storedCompanyToken = localStorage.getItem('companyToken')
+        fetchJobs();
+
+        const storedCompanyToken =
+            localStorage.getItem('companyToken');
 
         if (storedCompanyToken) {
-            setCompanyToken(storedCompanyToken)
+            setCompanyToken(storedCompanyToken);
         }
 
-    }, [])
+    }, []);
 
-    // Fetch Company Data if Company Token is Available
+    // Load User Data
     useEffect(() => {
-        if (companyToken) {
-            fetchCompanyData()
-        }
-    }, [companyToken])
 
-    // Fetch User's Applications & Data if User is Logged In
-    useEffect(() => {
         if (user) {
-            fetchUserData()
-            fetchUserApplications()
+            fetchUserData();
+            fetchUserApplications();
         }
-    }, [user])
 
+    }, [user]);
+
+    // Context Value
     const value = {
-        setSearchFilter, searchFilter,
-        isSearched, setIsSearched,
-        jobs, setJobs,
-        showRecruiterLogin, setShowRecruiterLogin,
-        companyToken, setCompanyToken,
-        companyData, setCompanyData,
+        searchFilter,
+        setSearchFilter,
+
+        isSearched,
+        setIsSearched,
+
+        jobs,
+        setJobs,
+
+        showRecruiterLogin,
+        setShowRecruiterLogin,
+
+        companyToken,
+        setCompanyToken,
+
+        companyData,
+        setCompanyData,
+
         backendUrl,
-        userData, setUserData,
-        userApplications, setUserApplications,
+
+        userData,
+        setUserData,
+
+        userApplications,
+        setUserApplications,
+
         fetchUserData,
         fetchUserApplications,
-        addDemoApplication,
+
         saveDemoResume,
+        saveDemoApplications
+    };
 
-    }
-
-    return (<AppContext.Provider value={value}>
-        {props.children}
-    </AppContext.Provider>)
-
-}
+    return (
+        <AppContext.Provider value={value}>
+            {props.children}
+        </AppContext.Provider>
+    );
+};
